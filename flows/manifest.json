@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "flows": [
+    {
+      "name": "pgy_whoami",
+      "version": "1.0.0",
+      "file": "pgy_whoami/1.0.0.js",
+      "risk": "read",
+      "minEngine": "0.3.0",
+      "allowedOrigins": [
+        "https://pgy.xiaohongshu.com"
+      ],
+      "disabled": null,
+      "description": "查询小红书蒲公英（pgy.xiaohongshu.com）当前登录的是哪个账号。用户的蒲公英登录态只存在于用户自己的 Chrome 里，内置浏览器没有登录，所以凡是涉及蒲公英账号、登录状态的问题都应优先调用本工具，而不是用内置浏览器打开网页。只读，不会下单。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "sha256": "bf15d24a673542034eb283609f34fd8047501c4cbdbbb2d1682e9e9dccfa4025"
+    }
+  ],
+  "serial": 1
+}

@@ -1,6 +1,6 @@
 // 蒲公英（pgy.xiaohongshu.com）批量下单。Ported from pgy_order/main.py.
 // Entries: preview (dry run + confirm code), submit (orders), allow_account.
-// Settings namespace "pgy": allowed_accounts, previews, ledger.
+// Settings namespace "pgy": allowed_accounts, previews, orders (per-KOL history).
 
 const BASE = "https://pgy.xiaohongshu.com";
 const HOME = `${BASE}/solar/pre-trade/home`;
@@ -8,6 +8,11 @@ const LOGIN_EXPIRED = -100;
 const PREVIEW_DELAY_MS = 3000;
 const ORDER_DELAY_MS = 10000;
 const PREVIEW_TTL_MS = 24 * 3600 * 1000;
+// Repeat-order guard: same KOL + same 合作名称 is held back for BLOCK_MS
+// unless the user chose to repeat it (复投); REMIND_MS only surfaces it.
+const BLOCK_MS = 24 * 3600 * 1000;
+const REMIND_MS = 30 * 24 * 3600 * 1000;
+const KEEP_MS = 90 * 24 * 3600 * 1000;
 const COLLECTION_FLAG = { 单品笔记: 1, 合作笔记: 2 };
 const MARKETING_TARGET = { 阅读: 1, 互动: 2, 曝光: 3 };
 const ADS_AUDIT_TRUE = ["是", "需要", "需勾选", "true", "True", "1", "✅"];
@@ -276,7 +281,10 @@ function packPayload(cfg, c, taskNo, reservation, publishAt) {
 
 // ---------- shared checks ----------
 
-const ledgerKey = (cfg, t) => `${t.kolId}|${cfg.title}`;
+const ago = (ms) => {
+  const h = Math.floor(ms / 3600000);
+  return h < 1 ? "不到 1 小时前" : h < 48 ? `${h} 小时前` : `${Math.floor(h / 24)} 天前`;
+};
 
 function prepare(input, api) {
   const cfg = parseTemplate(api, input.template);
@@ -284,18 +292,31 @@ function prepare(input, api) {
   const allowed = api.settings.get("allowed_accounts") || [];
   if (!allowed.includes(account.userId)) return { cfg, account, notAllowed: true };
   const talents = loadTalents(api, input.table);
-  const ledger = api.settings.get("ledger") || {};
+  if (api.settings.get("ledger")) api.settings.set("ledger", null); // pre-history format
+
+  const repeat = new Set((input.repeat_kol_ids || []).map(String));
+  const history = api.settings.get("orders") || {};
+  const now = Date.now();
   for (const t of talents) {
-    const prior = !t.error && ledger[ledgerKey(cfg, t)];
-    if (prior) {
-      t.error = prior.status === "unknown"
-        ? `上次下单结果未知（${prior.at}），请先在蒲公英后台核实是否已下单`
-        : `该达人已按「${cfg.title}」下过单（订单号 ${prior.taskNo || "-"}，${prior.at}），已跳过`;
+    if (t.error) continue;
+    const last = (history[t.kolId] || [])
+      .filter((o) => o.title === cfg.title)
+      .sort((a, b) => b.atMs - a.atMs)[0];
+    if (!last || now - last.atMs > REMIND_MS) continue;
+    const what = last.status === "unknown"
+      ? `下单结果未知（订单号 ${last.taskNo}）`
+      : `已下单（订单号 ${last.taskNo}${last.reservation ? "，预定单" : ""}）`;
+    const note = `${ago(now - last.atMs)}（${last.at}）按「${cfg.title}」${what}`;
+    if (now - last.atMs <= BLOCK_MS && !repeat.has(t.kolId)) {
+      t.held = true;
+      t.error = `${note}。24 小时内默认不重复下单；如用户确认要复投，把该达人 ID 放入 repeat_kol_ids 重新预览`;
+    } else {
+      t.recent = note;
     }
   }
   const valid = talents.filter((t) => !t.error);
   const fingerprint = JSON.stringify({
-    account: account.userId, cfg,
+    account: account.userId, cfg, repeat: [...repeat].sort(),
     rows: valid.map((t) => [t.kolId, t.contentType, cents(t.price), cents(t.total)]),
   });
   const code = api.sha256(fingerprint).slice(0, 8).toUpperCase();
@@ -362,15 +383,21 @@ function preview(input, api) {
     account, cooperation: cfg.title,
     rows: { total: talents.length, will_order: passed.length, skipped_or_failed: talents.length - passed.length },
     amount: { order_total_yuan: yuan(total), balance_yuan: yuan(balance), enough: balance >= total },
-    problems: talents.filter((t) => t.status !== "预览通过").slice(0, 20)
+    problems: talents.filter((t) => t.status !== "预览通过" && !t.held).slice(0, 20)
       .map((t) => ({ row: t.index, name: t.name, reason: t.reason || t.error })),
+    held_repeat_orders: talents.filter((t) => t.held)
+      .map((t) => ({ row: t.index, name: t.name, kol_id: t.kolId, reason: t.error })),
+    recent_orders: talents.filter((t) => t.recent)
+      .map((t) => ({ row: t.index, name: t.name, kol_id: t.kolId, note: t.recent })),
     result_file: file,
     confirm_code: ok ? code : null,
-    message: valid.length === 0
-      ? "表格里没有需要下单的达人（都已下过单、结果待核实或数据有问题），没有生成确认码，也没有下任何订单。请把问题列表告诉用户。"
+    message: (talents.some((t) => t.held || t.recent)
+      ? "注意：held_repeat_orders 里的达人 24 小时内已按同一合作名称下过单，默认不会重复下单；recent_orders 里的达人近 30 天下过单（不影响本次下单）。请一并告诉用户。如用户确认要复投 held_repeat_orders 里的达人，把他们的 kol_id 放进 repeat_kol_ids 重新预览。"
+      : "") + (valid.length === 0
+      ? "表格里没有需要下单的达人，没有生成确认码，也没有下任何订单。请把问题列表告诉用户。"
       : ok
-      ? "预览通过，尚未下任何订单。请把账号、下单数量、总金额和余额告诉用户；用户明确确认下单后，调用 pgy_order_submit 并传入同样的文件和这个 confirm_code。confirm_code 24 小时内有效，表格或模板有任何改动都会失效。"
-      : "预览未全部通过，没有生成确认码，也没有下任何订单。请把问题列表和结果文件告诉用户，修正表格或确认余额后重新预览。",
+      ? "预览通过，尚未下任何订单。请把账号、下单数量、总金额和余额告诉用户；用户明确确认下单后，调用 pgy_order_submit 并传入同样的文件、同样的 repeat_kol_ids（如有）和这个 confirm_code。confirm_code 24 小时内有效，表格或模板有任何改动都会失效。"
+      : "预览未全部通过，没有生成确认码，也没有下任何订单。请把问题列表和结果文件告诉用户，修正表格或确认余额后重新预览。"),
   };
 }
 
@@ -397,7 +424,6 @@ function submit(input, api) {
     const t = valid[i];
     api.progress({ stage: reservation ? "下预定单" : "下单", done: i, total: valid.length, current: t.name || t.kolId });
     if (loginLost) { t.status = "未处理"; t.reason = "蒲公英登录已失效，批量任务已中止"; continue; }
-    const key = ledgerKey(cfg, t);
     try {
       const c = checkout(api, cfg, t);
       t.tempItemId = c.tempItemId;
@@ -405,7 +431,7 @@ function submit(input, api) {
       const gen = call(api, "/api/solar/order/task_no/generate", { body: "", referrer: c.referrer, method: "POST" });
       if (!gen.success) throw new Error(`创建订单号失败：${gen.msg}`);
       t.taskNo = gen.data.taskNo;
-      recordLedger(api, key, { status: "unknown", taskNo: t.taskNo, reservation });
+      recordOrder(api, cfg, t, "unknown", reservation);
       let d;
       try {
         d = call(api, "/api/solar/order/pack", { body: packPayload(cfg, c, t.taskNo, reservation, publishAt), referrer: c.referrer });
@@ -417,16 +443,16 @@ function submit(input, api) {
       }
       if (d.success) {
         t.status = reservation ? "成功（预定单）" : "成功";
-        recordLedger(api, key, { status: "success", taskNo: t.taskNo, reservation });
+        recordOrder(api, cfg, t, "success", reservation);
       } else {
         t.status = "失败"; t.reason = `下单失败：${d.msg}`;
-        recordLedger(api, key, null);
+        recordOrder(api, cfg, t, null, reservation);
       }
     } catch (e) {
       if (e instanceof LoginExpired) {
         loginLost = true;
-        const ledger = api.settings.get("ledger") || {};
-        if (ledger[key] && ledger[key].status === "unknown") { t.status = "状态未知"; t.reason = `登录失效时正在下单，请到后台核实订单号 ${t.taskNo}`; }
+        const mine = t.taskNo && ((api.settings.get("orders") || {})[t.kolId] || []).find((o) => o.taskNo === t.taskNo);
+        if (mine && mine.status === "unknown") { t.status = "状态未知"; t.reason = `登录失效时正在下单，请到后台核实订单号 ${t.taskNo}`; }
         else { t.status = "失败"; t.reason = e.message; }
         continue;
       }
@@ -447,7 +473,7 @@ function submit(input, api) {
     },
     unknown_orders: talents.filter((t) => t.status === "状态未知").map((t) => ({ name: t.name, taskNo: t.taskNo })),
     result_file: file,
-    message: "下单已结束。请把成功、失败、状态未知的数量和结果文件告诉用户；状态未知的订单需要用户到蒲公英后台按订单号核实，确认前不会再次下单。",
+    message: "下单已结束。请把成功、失败、状态未知的数量和结果文件告诉用户；状态未知的订单需要用户到蒲公英后台按订单号核实；24 小时内这些达人默认不会按同一合作名称再次下单。",
   };
 }
 
@@ -458,11 +484,17 @@ function localTime() {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 }
 
-function recordLedger(api, key, entry) {
-  const ledger = api.settings.get("ledger") || {};
-  if (entry) ledger[key] = Object.assign({ at: localTime() }, entry);
-  else delete ledger[key];
-  api.settings.set("ledger", ledger);
+// Add, update (by taskNo) or drop one order in the per-KOL history, and
+// forget entries older than KEEP_MS.
+function recordOrder(api, cfg, t, status, reservation) {
+  const history = api.settings.get("orders") || {};
+  const list = (history[t.kolId] || []).filter((o) => o.taskNo !== t.taskNo);
+  if (status) list.push({ title: cfg.title, taskNo: t.taskNo, status, reservation, at: localTime(), atMs: Date.now() });
+  const now = Date.now();
+  for (const k of Object.keys(history)) history[k] = history[k].filter((o) => now - o.atMs <= KEEP_MS);
+  history[t.kolId] = list.filter((o) => now - o.atMs <= KEEP_MS);
+  for (const k of Object.keys(history)) if (!history[k].length) delete history[k];
+  api.settings.set("orders", history);
 }
 
 function allow_account(input, api) {

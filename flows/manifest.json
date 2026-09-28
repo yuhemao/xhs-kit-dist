@@ -31,7 +31,7 @@
       ],
       "disabled": null,
       "settingsNamespace": "pgy",
-      "sha256": "51fe48f7cf71529cc3c1e9102f2c26a1d6ef4694e5638911e41d95ee47eb94ca",
+      "sha256": "616ae922585103236ccb850a0461167466fe1f835b2a52efe9e40ea11b2ef88d",
       "name": "pgy_order_preview",
       "entry": "preview",
       "risk": "read",
@@ -50,6 +50,13 @@
             "type": "string",
             "x-file": "read",
             "description": "下单模板 txt 文件在本机上的完整路径"
+          },
+          "repeat_kol_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "复投：用户明确确认要再次下单的达人 kol_id（来自预览结果的 held_repeat_orders）。默认 24 小时内同一达人、同一合作名称不会重复下单；只有用户确认复投时才传。pgy_order_submit 必须传入与预览时完全相同的值。"
           }
         },
         "required": [
@@ -71,7 +78,7 @@
       ],
       "disabled": null,
       "settingsNamespace": "pgy",
-      "sha256": "51fe48f7cf71529cc3c1e9102f2c26a1d6ef4694e5638911e41d95ee47eb94ca",
+      "sha256": "616ae922585103236ccb850a0461167466fe1f835b2a52efe9e40ea11b2ef88d",
       "name": "pgy_order_submit",
       "entry": "submit",
       "risk": "write",
@@ -102,6 +109,13 @@
           "publish_date": {
             "type": "string",
             "description": "期望发布日期，格式 YYYY-MM-DD，不能早于今天。不传则为当天（与原来一致）。只有用户指定日期时才传。"
+          },
+          "repeat_kol_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "复投：用户明确确认要再次下单的达人 kol_id（来自预览结果的 held_repeat_orders）。默认 24 小时内同一达人、同一合作名称不会重复下单；只有用户确认复投时才传。pgy_order_submit 必须传入与预览时完全相同的值。"
           }
         },
         "required": [
@@ -124,7 +138,7 @@
       ],
       "disabled": null,
       "settingsNamespace": "pgy",
-      "sha256": "51fe48f7cf71529cc3c1e9102f2c26a1d6ef4694e5638911e41d95ee47eb94ca",
+      "sha256": "616ae922585103236ccb850a0461167466fe1f835b2a52efe9e40ea11b2ef88d",
       "name": "pgy_account_allow",
       "entry": "allow_account",
       "risk": "write",
@@ -145,5 +159,5 @@
       }
     }
   ],
-  "serial": 4
+  "serial": 5
 }

@@ -17,7 +17,133 @@
         "properties": {}
       },
       "sha256": "bf15d24a673542034eb283609f34fd8047501c4cbdbbb2d1682e9e9dccfa4025"
+    },
+    {
+      "version": "1.0.0",
+      "file": "pgy_order/1.0.0.js",
+      "minEngine": "0.4.3",
+      "allowedOrigins": [
+        "https://pgy.xiaohongshu.com",
+        "https://xhslink.com",
+        "http://xhslink.com",
+        "https://xhslink.cn",
+        "http://xhslink.cn"
+      ],
+      "disabled": null,
+      "settingsNamespace": "pgy",
+      "sha256": "51fe48f7cf71529cc3c1e9102f2c26a1d6ef4694e5638911e41d95ee47eb94ca",
+      "name": "pgy_order_preview",
+      "entry": "preview",
+      "risk": "read",
+      "background": true,
+      "timeoutSecs": 3600,
+      "description": "小红书蒲公英批量下单——第一步：预览核价（不会下任何订单）。读取用户提供的达人表格和下单模板，检查当前 Chrome 登录的蒲公英账号是否在本机允许名单、余额是否足够，并逐个达人核对原价和下单价。这是后台任务：先返回 job_id，请用 xhs_kit_job 查询直到完成。全部通过时会返回 confirm_code；必须把账号、下单数量、总金额、余额告诉用户并得到明确确认后，才能调用 pgy_order_submit。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "table": {
+            "type": "string",
+            "x-file": "read",
+            "description": "达人表格 Excel（.xlsx）文件在本机上的完整路径"
+          },
+          "template": {
+            "type": "string",
+            "x-file": "read",
+            "description": "下单模板 txt 文件在本机上的完整路径"
+          }
+        },
+        "required": [
+          "table",
+          "template"
+        ]
+      }
+    },
+    {
+      "version": "1.0.0",
+      "file": "pgy_order/1.0.0.js",
+      "minEngine": "0.4.3",
+      "allowedOrigins": [
+        "https://pgy.xiaohongshu.com",
+        "https://xhslink.com",
+        "http://xhslink.com",
+        "https://xhslink.cn",
+        "http://xhslink.cn"
+      ],
+      "disabled": null,
+      "settingsNamespace": "pgy",
+      "sha256": "51fe48f7cf71529cc3c1e9102f2c26a1d6ef4694e5638911e41d95ee47eb94ca",
+      "name": "pgy_order_submit",
+      "entry": "submit",
+      "risk": "write",
+      "background": true,
+      "timeoutSecs": 14400,
+      "description": "小红书蒲公英批量下单——第二步：正式下单（会产生真实订单和扣款）。只能在 pgy_order_preview 返回 confirm_code、且用户看过汇总并明确确认下单之后调用，传入与预览完全相同的表格、模板和 confirm_code。这是后台任务：先返回 job_id，请用 xhs_kit_job 查询直到完成，再把成功、失败、状态未知的数量和结果文件告诉用户。不要用任何其他工具或脚本代替本工具下单。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "table": {
+            "type": "string",
+            "x-file": "read",
+            "description": "达人表格 Excel（.xlsx）文件在本机上的完整路径"
+          },
+          "template": {
+            "type": "string",
+            "x-file": "read",
+            "description": "下单模板 txt 文件在本机上的完整路径"
+          },
+          "confirm_code": {
+            "type": "string",
+            "description": "pgy_order_preview 返回的确认码"
+          },
+          "reservation": {
+            "type": "boolean",
+            "description": "true 表示下「预定单」（reservation=1，用于测试流程，不是正式订单）；不传或 false 为正式下单。只有用户明确要求测试或预定单时才设为 true。"
+          },
+          "publish_date": {
+            "type": "string",
+            "description": "期望发布日期，格式 YYYY-MM-DD，不能早于今天。不传则为当天（与原来一致）。只有用户指定日期时才传。"
+          }
+        },
+        "required": [
+          "table",
+          "template",
+          "confirm_code"
+        ]
+      }
+    },
+    {
+      "version": "1.0.0",
+      "file": "pgy_order/1.0.0.js",
+      "minEngine": "0.4.3",
+      "allowedOrigins": [
+        "https://pgy.xiaohongshu.com",
+        "https://xhslink.com",
+        "http://xhslink.com",
+        "https://xhslink.cn",
+        "http://xhslink.cn"
+      ],
+      "disabled": null,
+      "settingsNamespace": "pgy",
+      "sha256": "51fe48f7cf71529cc3c1e9102f2c26a1d6ef4694e5638911e41d95ee47eb94ca",
+      "name": "pgy_account_allow",
+      "entry": "allow_account",
+      "risk": "write",
+      "background": false,
+      "timeoutSecs": 120,
+      "description": "把当前 Chrome 里登录的蒲公英账号加入本机的「允许下单账号」名单。只有在 pgy_order_preview 提示账号不在名单中、你已把该账号的昵称、公司和 userId 告诉用户、且用户明确同意之后才能调用。只能添加当前登录的账号。",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "预览结果里 current_account 的 userId"
+          }
+        },
+        "required": [
+          "user_id"
+        ]
+      }
     }
   ],
-  "serial": 1
+  "serial": 4
 }

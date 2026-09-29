@@ -323,6 +323,23 @@ function prepare(input, api) {
   return { cfg, account, talents, valid, code };
 }
 
+// What the user must check before confirming: the cooperation terms the
+// orders will carry. Contact phone and WeChat are left out on purpose.
+function templateSummary(cfg) {
+  const key = (map, v) => Object.keys(map).find((k) => map[k] === v) || String(v);
+  return {
+    合作名称: cfg.title,
+    合作id: cfg.reportBrandUserId,
+    联系人: cfg.contactName,
+    合作笔记题材: key(COLLECTION_FLAG, cfg.collectionFlag),
+    营销目标: key(MARKETING_TARGET, cfg.marketingTarget),
+    期望保留时长: `${cfg.noteProtectDay} 天`,
+    广审: cfg.needsAdsAudit ? "勾选" : "不勾选",
+    "SPU ID": cfg.spuId || "无",
+    合作要求: cfg.contentRequirement.length > 60 ? `${cfg.contentRequirement.slice(0, 60)}…` : cfg.contentRequirement,
+  };
+}
+
 function notAllowedReply(account) {
   return {
     status: "account_not_allowed",
@@ -381,6 +398,8 @@ function preview(input, api) {
   return {
     status: ok ? "ready" : "not_ready",
     account, cooperation: cfg.title,
+    files: { table: input.table, template: input.template },
+    template_summary: templateSummary(cfg),
     rows: { total: talents.length, will_order: passed.length, skipped_or_failed: talents.length - passed.length },
     amount: { order_total_yuan: yuan(total), balance_yuan: yuan(balance), enough: balance >= total },
     problems: talents.filter((t) => t.status !== "预览通过" && !t.held).slice(0, 20)
@@ -396,7 +415,7 @@ function preview(input, api) {
       : "") + (valid.length === 0
       ? "表格里没有需要下单的达人，没有生成确认码，也没有下任何订单。请把问题列表告诉用户。"
       : ok
-      ? "预览通过，尚未下任何订单。请把账号、下单数量、总金额和余额告诉用户；用户明确确认下单后，调用 pgy_order_submit 并传入同样的文件、同样的 repeat_kol_ids（如有）和这个 confirm_code。confirm_code 24 小时内有效，表格或模板有任何改动都会失效。"
+      ? "预览通过，尚未下任何订单。请把账号、下单数量、总金额、余额，以及 files 和 template_summary（使用的表格、模板和其中的合作信息）告诉用户，请用户核对模板是否正是这一批要用的；用户明确确认下单后，调用 pgy_order_submit 并传入同样的文件、同样的 repeat_kol_ids（如有）和这个 confirm_code。confirm_code 24 小时内有效，表格或模板有任何改动都会失效。"
       : "预览未全部通过，没有生成确认码，也没有下任何订单。请把问题列表和结果文件告诉用户，修正表格或确认余额后重新预览。"),
   };
 }

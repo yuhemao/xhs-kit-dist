@@ -31,25 +31,25 @@
       ],
       "disabled": null,
       "settingsNamespace": "pgy",
-      "sha256": "616ae922585103236ccb850a0461167466fe1f835b2a52efe9e40ea11b2ef88d",
+      "sha256": "19a73488c72cb17db6056e2559123177c8cd9211588bf6480754e15c32032c91",
       "name": "pgy_order_preview",
       "entry": "preview",
       "risk": "read",
       "background": true,
       "timeoutSecs": 3600,
-      "description": "小红书蒲公英批量下单——第一步：预览核价（不会下任何订单）。读取用户提供的达人表格和下单模板，检查当前 Chrome 登录的蒲公英账号是否在本机允许名单、余额是否足够，并逐个达人核对原价和下单价。这是后台任务：先返回 job_id，请用 xhs_kit_job 查询直到完成。全部通过时会返回 confirm_code；必须把账号、下单数量、总金额、余额告诉用户并得到明确确认后，才能调用 pgy_order_submit。",
+      "description": "小红书蒲公英批量下单——第一步：预览核价（不会下任何订单）。读取用户提供的达人表格和下单模板，检查当前 Chrome 登录的蒲公英账号是否在本机允许名单、余额是否足够，并逐个达人核对原价和下单价。这是后台任务：先返回 job_id，请用 xhs_kit_job 查询直到完成。全部通过时会返回 confirm_code；必须把账号、下单数量、总金额、余额告诉用户并得到明确确认后，才能调用 pgy_order_submit。 只能通过本 MCP 工具调用，不要自己编写脚本或在命令行启动引擎来代替。",
       "inputSchema": {
         "type": "object",
         "properties": {
           "table": {
             "type": "string",
             "x-file": "read",
-            "description": "达人表格 Excel（.xlsx）文件在本机上的完整路径"
+            "description": "达人表格 Excel（.xlsx）文件在本机上的完整路径。必须是用户在本次对话里明确指定的文件，不要自行挑选、猜测或沿用其他目录里的文件。"
           },
           "template": {
             "type": "string",
             "x-file": "read",
-            "description": "下单模板 txt 文件在本机上的完整路径"
+            "description": "下单模板 txt 文件在本机上的完整路径。必须是用户在本次对话里明确指定的文件，不要自行挑选、猜测或沿用其他目录里的文件。"
           },
           "repeat_kol_ids": {
             "type": "array",
@@ -78,25 +78,25 @@
       ],
       "disabled": null,
       "settingsNamespace": "pgy",
-      "sha256": "616ae922585103236ccb850a0461167466fe1f835b2a52efe9e40ea11b2ef88d",
+      "sha256": "19a73488c72cb17db6056e2559123177c8cd9211588bf6480754e15c32032c91",
       "name": "pgy_order_submit",
       "entry": "submit",
       "risk": "write",
       "background": true,
       "timeoutSecs": 14400,
-      "description": "小红书蒲公英批量下单——第二步：正式下单（会产生真实订单和扣款）。只能在 pgy_order_preview 返回 confirm_code、且用户看过汇总并明确确认下单之后调用，传入与预览完全相同的表格、模板和 confirm_code。这是后台任务：先返回 job_id，请用 xhs_kit_job 查询直到完成，再把成功、失败、状态未知的数量和结果文件告诉用户。不要用任何其他工具或脚本代替本工具下单。",
+      "description": "小红书蒲公英批量下单——第二步：正式下单（会产生真实订单和扣款）。只能在 pgy_order_preview 返回 confirm_code、且用户看过汇总并明确确认下单之后调用，传入与预览完全相同的表格、模板和 confirm_code。这是后台任务：先返回 job_id，请用 xhs_kit_job 查询直到完成，再把成功、失败、状态未知的数量和结果文件告诉用户。不要用任何其他工具或脚本代替本工具下单。 只能通过本 MCP 工具调用，不要自己编写脚本或在命令行启动引擎来代替。",
       "inputSchema": {
         "type": "object",
         "properties": {
           "table": {
             "type": "string",
             "x-file": "read",
-            "description": "达人表格 Excel（.xlsx）文件在本机上的完整路径"
+            "description": "达人表格 Excel（.xlsx）文件在本机上的完整路径。必须是用户在本次对话里明确指定的文件，不要自行挑选、猜测或沿用其他目录里的文件。"
           },
           "template": {
             "type": "string",
             "x-file": "read",
-            "description": "下单模板 txt 文件在本机上的完整路径"
+            "description": "下单模板 txt 文件在本机上的完整路径。必须是用户在本次对话里明确指定的文件，不要自行挑选、猜测或沿用其他目录里的文件。"
           },
           "confirm_code": {
             "type": "string",
@@ -138,7 +138,7 @@
       ],
       "disabled": null,
       "settingsNamespace": "pgy",
-      "sha256": "616ae922585103236ccb850a0461167466fe1f835b2a52efe9e40ea11b2ef88d",
+      "sha256": "19a73488c72cb17db6056e2559123177c8cd9211588bf6480754e15c32032c91",
       "name": "pgy_account_allow",
       "entry": "allow_account",
       "risk": "write",
@@ -159,5 +159,5 @@
       }
     }
   ],
-  "serial": 5
+  "serial": 6
 }

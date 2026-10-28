@@ -187,11 +187,13 @@ echo "已登记的助手：${FOUND:-无}"
 [ -n "$PENDING_CLAUDE" ] && echo "待完成：请完全退出 Claude（⌘Q）一次，配置会自动写入并重新打开 Claude。"
 echo
 if [ -n "$EXT_OK" ]; then
+  echo "【给 AI 助手】下面这一步只有用户本人能做：请把 5 个步骤和扩展文件夹的完整路径原样、逐条告诉用户，不要省略或概括。"
   echo "唯一需要你手动做的一步：在 Chrome 里加载扩展「鱼猫投放MCP」"
   echo "  1. 打开 chrome://extensions（已为你尝试打开）"
   echo "  2. 打开右上角「开发者模式」"
   echo "  3. 点「加载已解压的扩展程序」"
   echo "  4. 选择这个文件夹：$EXT_DIR"
+  echo "     （这是隐藏文件夹：在选择窗口里按 ⌘+Shift+G，粘贴上面的路径，回车后点「选择」）"
   echo "  5. 保持 Chrome 登录蒲公英（pgy.xiaohongshu.com）"
 else
   echo "扩展没有下载成功：请重新运行安装脚本。"

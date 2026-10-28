@@ -27,7 +27,12 @@ claude_running() { pgrep -x "Claude" >/dev/null 2>&1; }
 json_register() {
   f="$1"; entry="$2"
   mkdir -p "$(dirname "$f")"
-  [ -f "$f" ] || printf '{}\n' > "$f"
+  if [ ! -s "$f" ] || [ "$(tr -d ' \n\r\t' < "$f")" = "{}" ]; then
+    # plutil 无法往空的根对象里插入，空文件/{} 直接写入完整内容
+    [ -f "$f" ] && cp -p "$f" "$f.xhs-kit.bak"
+    printf '{"mcpServers":{"xhs-kit":%s}}\n' "$entry" > "$f"
+    return 0
+  fi
   cp -p "$f" "$f.xhs-kit.bak"
   plutil -extract mcpServers json -o - "$f" >/dev/null 2>&1 || plutil -insert mcpServers -json '{}' "$f"
   if plutil -extract mcpServers.xhs-kit json -o - "$f" >/dev/null 2>&1; then
@@ -137,7 +142,12 @@ if [ -d "$HOME/Library/Application Support/Claude" ]; then
 n=0
 while pgrep -x "Claude" >/dev/null 2>&1; do n=\$((n+1)); [ \$n -gt 43200 ] && exit 0; sleep 2; done
 f="$CLAUDE_CFG"
-cp -p "\$f" "\$f.xhs-kit.bak" 2>/dev/null || printf '{}\n' > "\$f"
+cp -p "\$f" "\$f.xhs-kit.bak" 2>/dev/null
+if [ ! -s "\$f" ] || [ "\$(tr -d ' \\n\\r\\t' < "\$f")" = "{}" ]; then
+  printf '{"mcpServers":{"xhs-kit":%s}}\n' '$ENTRY' > "\$f"
+  open -a Claude
+  exit 0
+fi
 plutil -extract mcpServers json -o - "\$f" >/dev/null 2>&1 || plutil -insert mcpServers -json '{}' "\$f"
 plutil -extract mcpServers.xhs-kit json -o - "\$f" >/dev/null 2>&1 \\
   && plutil -replace mcpServers.xhs-kit -json '$ENTRY' "\$f" \\
